@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging, sys, socket, subprocess, threading, time
+import logging, sys, socket, subprocess, threading, time, os.path
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
@@ -15,6 +15,11 @@ class Configure:
 		self.httpProxyForwardAddr = config.get('main', 'httpProxyForwardAddr')
 		self.username = config.get('main', 'username')
 		self.useForwardOrSocks = config.get('main', 'useForwardOrSocks')
+
+		try:
+			self.useDaemon = config.getboolean('main', 'useDaemon')
+		except NoOptionError as e:
+			self.useDaemon = False
 
 		try:
 			self.socksPort = config.getint('main', 'socksPort')
@@ -38,6 +43,11 @@ class Configure:
 
 		self.verbose = config.getboolean('debug', 'verbose')
 
+	def convertPaths(self):
+		self.obfs2Path = os.path.abspath(self.obfs2Path)
+		self.clientPath = os.path.abspath(self.clientPath)
+		self.keyFilePath = os.path.abspath(self.keyFilePath)
+		
 g_conf = None
 
 def convertAddress(address):
@@ -92,11 +102,32 @@ def parseArgv():
 		sys.exit(2)
 
 	if configFn == None:
-		print str(e)
 		usage()
 		sys.exit(2)
 	
 	return configFn
+
+class NullDevice:
+    def write(self, s):
+        pass
+
+def daemonize():
+        sys.stdin.close()
+        sys.stdout = NullDevice()
+        sys.stderr = NullDevice()
+        pid = os.fork()
+
+        if pid == 0:
+                os.setsid()
+                pid = os.fork()
+
+                if pid == 0:
+                        os.umask(0)
+                        os.chdir('/')
+                else:
+                        os._exit(0)
+        else:
+                os._exit(0)
 
 def main():
 	global g_conf
@@ -108,6 +139,11 @@ def main():
 	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
 	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port), 'client', '%s:%d' % (g_conf.SSHHostName, g_conf.SSHPort) ]
+
+	if g_conf.useDaemon:
+		g_conf.convertPaths()
+		daemonize()
+
 	runCmdInThread(obfsproxyCmd)
 
 	while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
