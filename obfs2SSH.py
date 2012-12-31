@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging, sys, socket, subprocess, threading, time, os.path
+import logging, sys, socket, subprocess, threading, time, os.path, os
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
@@ -141,6 +141,8 @@ def main():
 	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port), 'client', '%s:%d' % (g_conf.SSHHostName, g_conf.SSHPort) ]
 
 	if g_conf.useDaemon:
+		if os.name == 'nt':
+			raise RuntimeError('cannot be daemon in Windows')
 		g_conf.convertPaths()
 		daemonize()
 
