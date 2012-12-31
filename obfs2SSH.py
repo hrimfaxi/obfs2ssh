@@ -4,9 +4,6 @@ import logging, sys, socket, subprocess, threading, time
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
-VERSION='0.0'
-PROG_NAME = "Obfs2SSH"
-
 class Configure:
 	def __init__(self, fname):
 		config = ConfigParser()
@@ -81,6 +78,8 @@ def usage():
 	print ("%s: -f <config>" % (sys.argv[0]))
 
 def parseArgv():
+	configFn = None
+
 	try:
 		optlist, args = getopt(sys.argv[1:], 'f:')
 
@@ -88,6 +87,11 @@ def parseArgv():
 			if o == '-f':
 				configFn = a
 	except GetoptError as e:
+		print str(e)
+		usage()
+		sys.exit(2)
+
+	if configFn == None:
 		print str(e)
 		usage()
 		sys.exit(2)
@@ -100,16 +104,9 @@ def main():
 	configFn = parseArgv()
 	g_conf = Configure(configFn)
 	logging.basicConfig(level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
-	logging.info("%s: version: %s", PROG_NAME, VERSION)
-
 	g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
-	logging.debug("obfs2 host: %s, port: %d", g_conf.obfs2HostName, g_conf.obfs2Port)
-
 	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
-	logging.debug("ssh host: %s, port: %d", g_conf.SSHHostName, g_conf.SSHPort)
-
 	del g_conf.obfs2Addr, g_conf.SSHAddr
-
 	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port), 'client', '%s:%d' % (g_conf.SSHHostName, g_conf.SSHPort) ]
 	runCmdInThread(obfsproxyCmd)
 
@@ -138,7 +135,6 @@ def main():
 					else '-p', '%d' % (g_conf.SSHPort) ] 
 
 		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
-
 		runCmd(plinkCmd)
 		time.sleep(1)
 
