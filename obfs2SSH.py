@@ -29,11 +29,15 @@ class Configure:
 		if self.useForwardOrSocks.upper() == 'SOCKS':
 			assert(self.socksPort)
 
-		assert(self.clientType == 'plink')
+		assert(self.clientType.upper() == 'PLINK' or self.clientType.upper() == 'SSH')
 
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
-		self.keyFilePath = config.get('path', 'keyFilePath', None)
+
+		try:
+			self.keyFilePath = config.get('path', 'keyFilePath')
+		except NoOptionError as e:
+			self.keyFilePath = None
 
 		self.verbose = config.getboolean('debug', 'verbose')
 
@@ -119,23 +123,21 @@ def main():
 
 		if g_conf.verbose:
 			plinkCmd += [ '-v' ]
+
+		plinkCmd += [ '-N' ]
+
+		if g_conf.keyFilePath:
+			plinkCmd += [ '-i', g_conf.keyFilePath ]
 		
-		if g_conf.clientType == 'plink':
-			plinkCmd += [ '-N' ]
-
-			if g_conf.keyFilePath:
-				plinkCmd += [ '-i', g_conf.keyFilePath ]
-
-			if g_conf.useForwardOrSocks.upper() == 'FORWARD':
-				plinkCmd += [ '-L', g_conf.httpProxyForwardAddr ]
-			else:
-				plinkCmd += [ '-D', '%d'% (g_conf.socksPort) ]
-
-			plinkCmd += [ '-P', '%d' % (g_conf.SSHPort), '%s@%s' % (g_conf.username, g_conf.SSHHostName)]
-		elif g_conf.clientType == 'ssh':
-			raise RuntimeError("TODO %s" %(g_conf.clientType))
+		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
+			plinkCmd += [ '-L', g_conf.httpProxyForwardAddr ]
 		else:
-			raise RuntimeError("Unknown ssh client type %s" %(g_conf.clientType))
+			plinkCmd += [ '-D', '%d'% (g_conf.socksPort) ]
+
+		plinkCmd += [ '-P' if g_conf.clientType.upper() == 'PLINK' \
+					else '-p', '%d' % (g_conf.SSHPort) ] 
+
+		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
 
 		runCmd(plinkCmd)
 		time.sleep(1)
