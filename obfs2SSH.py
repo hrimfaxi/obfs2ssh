@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging, sys, socket, subprocess, threading, time, os.path, os
+import logging, sys, socket, subprocess, threading, time, os.path, os, signal
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
@@ -63,9 +63,18 @@ def runCmd(cmd):
 	retcode = subprocess.call(cmd)
 	logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
 
+g_obfsproxyProcess = None
+
 def execThr(cmd):
+	global g_obfsproxyProcess
+
 	while True:
-		runCmd(cmd)
+		cmdStr = " ".join(cmd).strip()
+		logging.info("Executing: %s", cmdStr)
+		g_obfsproxyProcess = subprocess.Popen(cmd)
+		retcode = g_obfsproxyProcess.wait()
+		g_obfsproxyProcess = None
+		logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
 		time.sleep(2)
 
 def runCmdInThread(cmd):
@@ -175,6 +184,17 @@ def main():
 		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
 		runCmd(plinkCmd)
 		time.sleep(1)
+
+import atexit
+
+@atexit.register
+def cleanup():
+	global g_obfsproxyProcess 
+
+	if g_obfsproxyProcess:
+		print "Cleanup Process %d" % (g_obfsproxyProcess.pid)
+		g_obfsproxyProcess.terminate()
+		g_obfsproxyProcess = None
 
 if __name__ == "__main__":
 	main()
