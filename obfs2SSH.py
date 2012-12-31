@@ -22,6 +22,11 @@ class Configure:
 			self.useDaemon = False
 
 		try:
+			self.logFilename = config.get('main', 'logFilename')
+		except NoOptionError as e:
+			self.logFilename = None
+
+		try:
 			self.socksPort = config.getint('main', 'socksPort')
 		except NoOptionError as e:
 			self.socksPort = None
@@ -43,11 +48,6 @@ class Configure:
 
 		self.verbose = config.getboolean('debug', 'verbose')
 
-	def convertPaths(self):
-		self.obfs2Path = os.path.abspath(self.obfs2Path)
-		self.clientPath = os.path.abspath(self.clientPath)
-		self.keyFilePath = os.path.abspath(self.keyFilePath)
-		
 g_conf = None
 
 def convertAddress(address):
@@ -138,12 +138,22 @@ def daemonize():
         else:
                 os._exit(0)
 
+def onSIGTERM(signum , stack_frame):
+	cleanup()
+	sys.exit(0)
+
 def main():
 	global g_conf
 
 	configFn = parseArgv()
 	g_conf = Configure(configFn)
-	logging.basicConfig(level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
+	signal.signal(signal.SIGTERM, onSIGTERM)
+
+	if g_conf.useDaemon:
+		if g_conf.logFilename:
+			logging.basicConfig(filename=g_conf.logFilename, level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
+	else:
+		logging.basicConfig(level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 	g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
 	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
@@ -152,7 +162,6 @@ def main():
 	if g_conf.useDaemon:
 		if os.name == 'nt':
 			raise RuntimeError('cannot be daemon in Windows')
-		g_conf.convertPaths()
 		daemonize()
 
 	runCmdInThread(obfsproxyCmd)

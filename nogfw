@@ -1,0 +1,40 @@
+#!/bin/bash
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+PID=`pgrep -f "python.*obfs2SSH.py"`
+OBFS2SSH="/home/hrimfaxi/obfs2SSH/obfs2SSH.py -f /home/hrimfaxi/obfs2SSH/rc"
+
+case "$1" in
+  start)
+    stat_busy "Starting nogfw daemon"
+		[ -z "$PID" ] && su -s /bin/sh hrimfaxi -c "$OBFS2SSH"
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+      add_daemon nogfw
+      stat_done
+    fi
+  	;;
+  stop)
+    stat_busy "Stopping nogfw daemon"
+    [ ! -z "$PID" ] && kill $PID &> /dev/null
+    if [ $? -gt 0 ]; then
+      stat_fail
+    else
+		  rm_daemon nogfw
+      stat_done
+    fi
+    ;;
+  restart)
+    $0 stop
+    while [ ! -z "$PID" -a -d "/proc/$PID" ]; do sleep 1; done
+    $0 start
+    ;;
+  *)
+    echo "usage: $0 {start|stop|restart}"
+esac
+
+exit 0
+# vim: ft=sh ts=2 sw=2
