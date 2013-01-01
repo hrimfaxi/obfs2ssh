@@ -60,7 +60,18 @@ def convertAddress(address):
 def runCmd(cmd):
 	cmdStr = " ".join(cmd).strip()
 	logging.info("Executing: %s", cmdStr)
-	retcode = subprocess.call(cmd)
+	kwargs = {}
+
+	if subprocess.mswindows:
+		su = subprocess.STARTUPINFO()
+		su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+		su.wShowWindow = subprocess.SW_HIDE
+		kwargs['startupinfo'] = su
+		p = subprocess.Popen(cmd, **kwargs)
+	else:
+		p = subprocess.Popen(cmd)
+
+	retcode = p.wait()
 	logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
 
 g_obfsproxyProcess = None
@@ -71,7 +82,17 @@ def execThr(cmd):
 	while True:
 		cmdStr = " ".join(cmd).strip()
 		logging.info("Executing: %s", cmdStr)
-		g_obfsproxyProcess = subprocess.Popen(cmd)
+		kwargs = {}
+
+		if subprocess.mswindows:
+			su = subprocess.STARTUPINFO()
+			su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+			su.wShowWindow = subprocess.SW_HIDE
+			kwargs['startupinfo'] = su
+			g_obfsproxyProcess = subprocess.Popen(cmd, **kwargs)
+		else:
+			g_obfsproxyProcess = subprocess.Popen(cmd)
+
 		retcode = g_obfsproxyProcess.wait()
 		g_obfsproxyProcess = None
 		logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
