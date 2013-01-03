@@ -6,15 +6,19 @@ from getopt import getopt, GetoptError
 
 class Configure:
 	def __init__(self, fname):
-		config = ConfigParser()
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2' }
+		config = ConfigParser(defaultConfig)
 		config.read(fname)
-
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
 		self.SSHAddr= config.get('main', 'SSHAddr')
 		self.clientType = config.get('main', 'clientType')
 		self.httpProxyForwardAddr = config.get('main', 'httpProxyForwardAddr')
 		self.username = config.get('main', 'username')
 		self.useForwardOrSocks = config.get('main', 'useForwardOrSocks')
+		self.obfs2Path = config.get('path', 'Obfs2Path')
+		self.clientPath = config.get('path', 'clientPath')
+		self.verbose = config.getboolean('debug', 'verbose')
+		self.retriesInterval = config.getint('main', 'retriesInterval')
 
 		try:
 			self.useDaemon = config.getboolean('main', 'useDaemon')
@@ -31,22 +35,16 @@ class Configure:
 		except NoOptionError as e:
 			self.socksPort = None
 
-		assert(self.useForwardOrSocks.upper() == 'FORWARD' or self.useForwardOrSocks.upper() == 'SOCKS')
-
-		if self.useForwardOrSocks.upper() == 'SOCKS':
-			assert(self.socksPort)
-
-		assert(self.clientType.upper() == 'PLINK' or self.clientType.upper() == 'SSH')
-
-		self.obfs2Path = config.get('path', 'Obfs2Path')
-		self.clientPath = config.get('path', 'clientPath')
-
 		try:
 			self.keyFilePath = config.get('path', 'keyFilePath')
 		except NoOptionError as e:
 			self.keyFilePath = None
 
-		self.verbose = config.getboolean('debug', 'verbose')
+		assert(self.useForwardOrSocks.upper() == 'FORWARD' or self.useForwardOrSocks.upper() == 'SOCKS')
+		assert(self.clientType.upper() == 'PLINK' or self.clientType.upper() == 'SSH')
+
+		if self.useForwardOrSocks.upper() == 'SOCKS':
+			assert(self.socksPort)
 
 g_conf = None
 
@@ -57,24 +55,33 @@ def convertAddress(address):
 
 	return ip, port
 
-def runCmd(cmd):
-	cmdStr = " ".join(cmd).strip()
-	logging.info("Executing: %s", cmdStr)
+def getSubprocessKwargs():
 	kwargs = {}
-
+	
+	if g_conf.useDaemon:
+		kwargs['stdout'] = open(os.devnull, 'w')
+		kwargs['stderr'] = subprocess.STDOUT
+	
 	if subprocess.mswindows:
 		su = subprocess.STARTUPINFO()
 		su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		su.wShowWindow = subprocess.SW_HIDE
 		kwargs['startupinfo'] = su
-		p = subprocess.Popen(cmd, **kwargs)
-	else:
-		p = subprocess.Popen(cmd)
 
-	retcode = p.wait()
-	logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
+	return kwargs
+
+def runCmd(cmd):
+	cmdStr = " ".join(cmd).strip()
+	logging.info("Executing: %s", cmdStr)
+	retcode = subprocess.call(cmd, **getSubprocessKwargs())
+
+	return retcode
 
 g_obfsproxyProcess = None
+
+def onRetriesDelay(retcode):
+	logging.info("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+	time.sleep(g_conf.retriesInterval)
 
 def execThr(cmd):
 	global g_obfsproxyProcess
@@ -82,21 +89,11 @@ def execThr(cmd):
 	while True:
 		cmdStr = " ".join(cmd).strip()
 		logging.info("Executing: %s", cmdStr)
-		kwargs = {}
-
-		if subprocess.mswindows:
-			su = subprocess.STARTUPINFO()
-			su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-			su.wShowWindow = subprocess.SW_HIDE
-			kwargs['startupinfo'] = su
-			g_obfsproxyProcess = subprocess.Popen(cmd, **kwargs)
-		else:
-			g_obfsproxyProcess = subprocess.Popen(cmd)
+		g_obfsproxyProcess = subprocess.Popen(cmd, **getSubprocessKwargs())
 
 		retcode = g_obfsproxyProcess.wait()
 		g_obfsproxyProcess = None
-		logging.info("Terminated by error code %d, restarting in 2 seconds...", retcode)
-		time.sleep(2)
+		onRetriesDelay(retcode)
 
 def runCmdInThread(cmd):
 	t = threading.Thread(target=execThr, args=(cmd,))
@@ -175,6 +172,7 @@ def main():
 			logging.basicConfig(filename=g_conf.logFilename, level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 	else:
 		logging.basicConfig(level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
+
 	g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
 	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
@@ -187,12 +185,12 @@ def main():
 
 	runCmdInThread(obfsproxyCmd)
 
-	while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
-		time.sleep(1)
-
-	logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
-
 	while True:
+		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
+			time.sleep(0.5)
+
+		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
+		
 		plinkCmd = [ g_conf.clientPath ]
 
 		if g_conf.verbose:
@@ -212,8 +210,8 @@ def main():
 					else '-p', '%d' % (g_conf.SSHPort) ] 
 
 		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
-		runCmd(plinkCmd)
-		time.sleep(1)
+		retcode = runCmd(plinkCmd)
+		onRetriesDelay(retcode)
 
 import atexit
 
