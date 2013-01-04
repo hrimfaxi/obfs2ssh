@@ -17,10 +17,15 @@ OBFS2_PORT=55244
 USER=nogfw
 PID_FILE=/home/$USER/obfsproxy.pid
 OBFSPROXY=/usr/local/bin/obfsproxy
+#SHARED_SECRET_KEY=hackme
+
+if [ ! -z ${SHARED_SECRET_KEY+x} ]; then
+	OBFSPROXY_OPTS=--shared-secret=$SHARED_SECRET_KEY
+fi
 
 start() {
 	echo "Starting obfsproxy on port $OBFS2_PORT to port $SSH_PORT"
-	start-stop-daemon --start -c $USER -b -m -p $PID_FILE -x $OBFSPROXY -- obfs2 --dest=127.0.0.1:$SSH_PORT server 0.0.0.0:$OBFS2_PORT
+	start-stop-daemon --start -c $USER -b -m -p $PID_FILE -x $OBFSPROXY -- obfs2 --dest=127.0.0.1:$SSH_PORT $OBFSPROXY_OPTS server 0.0.0.0:$OBFS2_PORT
 }
 
 stop() {
