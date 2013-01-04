@@ -1,4 +1,13 @@
 #!/bin/sh
+### BEGIN INIT INFO
+# Provides:          obfs2ssh-server
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: obfsproxy tunnel for SSH
+# Description:       See http://code.google.com/p/obfs2ssh/ for detail
+### END INIT INFO
 
 # This is control script for obfsproxy for server with obfs2ssh
 # See http://code.google.com/p/obfs2ssh/ for detail
