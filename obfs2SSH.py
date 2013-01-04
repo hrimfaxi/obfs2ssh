@@ -194,8 +194,8 @@ def main():
 			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
 				time.sleep(0.5)
 
-		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
-		
+			logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
+			
 		plinkCmd = [ g_conf.clientPath ]
 
 		if g_conf.verbose:
