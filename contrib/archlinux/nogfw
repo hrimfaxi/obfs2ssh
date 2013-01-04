@@ -4,7 +4,9 @@
 . /etc/rc.d/functions
 
 PID=`pgrep -f "python.*obfs2SSH.py"`
-OBFS2SSH="/home/hrimfaxi/obfs2SSH/obfs2SSH.py -f /home/hrimfaxi/obfs2SSH/rc"
+OBFS2SSH=/home/hrimfaxi/obfs2SSH/obfs2SSH.py
+OBFS2RC=/home/hrimfaxi/obfs2SSH/rc
+OBFS2SSH="$OBFS2SSH -f $OBFS2RC"
 
 case "$1" in
   start)
