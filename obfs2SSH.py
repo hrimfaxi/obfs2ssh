@@ -6,7 +6,7 @@ from getopt import getopt, GetoptError
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -19,6 +19,7 @@ class Configure:
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
 		self.retriesInterval = config.getint('main', 'retriesInterval')
+		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
 
 		try:
 			self.useDaemon = config.getboolean('main', 'useDaemon')
@@ -183,11 +184,15 @@ def main():
 			raise RuntimeError('cannot be daemon in Windows')
 		daemonize()
 
-	runCmdInThread(obfsproxyCmd)
+	if g_conf.disableObfs2:
+		g_conf.SSHHostName, g_conf.SSHPort = g_conf.obfs2HostName, g_conf.obfs2Port
+	else:
+		runCmdInThread(obfsproxyCmd)
 
 	while True:
-		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
-			time.sleep(0.5)
+		if not g_conf.disableObfs2:
+			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
+				time.sleep(0.5)
 
 		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
 		
