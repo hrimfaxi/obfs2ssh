@@ -225,7 +225,7 @@ def cleanup():
 	global g_obfsproxyProcess 
 
 	if g_obfsproxyProcess:
-		print "Cleanup Process %d" % (g_obfsproxyProcess.pid)
+		logging.info("Cleanup Process %d", g_obfsproxyProcess.pid)
 		g_obfsproxyProcess.terminate()
 		g_obfsproxyProcess = None
 
