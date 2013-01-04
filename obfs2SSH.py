@@ -6,7 +6,7 @@ from getopt import getopt, GetoptError
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -15,11 +15,12 @@ class Configure:
 		self.httpProxyForwardAddr = config.get('main', 'httpProxyForwardAddr')
 		self.username = config.get('main', 'username')
 		self.useForwardOrSocks = config.get('main', 'useForwardOrSocks')
+		self.retriesInterval = config.getint('main', 'retriesInterval')
+		self.sharedSecret = config.get('main', 'sharedSecret')
+		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
-		self.retriesInterval = config.getint('main', 'retriesInterval')
-		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
 
 		try:
 			self.useDaemon = config.getboolean('main', 'useDaemon')
@@ -48,6 +49,7 @@ class Configure:
 			assert(self.socksPort)
 
 g_conf = None
+g_quitting = False
 
 def convertAddress(address):
 	host, port = address.split(':')
@@ -81,19 +83,19 @@ def runCmd(cmd):
 g_obfsproxyProcess = None
 
 def onRetriesDelay(retcode):
-	logging.info("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
-	time.sleep(g_conf.retriesInterval)
+	if not g_quitting:
+		logging.info("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+		time.sleep(g_conf.retriesInterval)
 
 def execThr(cmd):
 	global g_obfsproxyProcess
 
-	while True:
+	while not g_quitting:
 		cmdStr = " ".join(cmd).strip()
 		logging.info("Executing: %s", cmdStr)
 		g_obfsproxyProcess = subprocess.Popen(cmd, **getSubprocessKwargs())
 
 		retcode = g_obfsproxyProcess.wait()
-		g_obfsproxyProcess = None
 		onRetriesDelay(retcode)
 
 def runCmdInThread(cmd):
@@ -177,7 +179,12 @@ def main():
 	g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
 	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
-	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port), 'client', '%s:%d' % (g_conf.SSHHostName, g_conf.SSHPort) ]
+	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port) ]
+
+	if g_conf.sharedSecret:
+		obfsproxyCmd += [ '--shared-secret=%s' % (g_conf.sharedSecret) ]
+
+	obfsproxyCmd += [ 'client', '%s:%d' % (g_conf.SSHHostName, g_conf.SSHPort) ]
 
 	if g_conf.useDaemon:
 		if os.name == 'nt':
@@ -189,7 +196,7 @@ def main():
 	else:
 		runCmdInThread(obfsproxyCmd)
 
-	while True:
+	while not g_quitting:
 		if not g_conf.disableObfs2:
 			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
 				time.sleep(0.5)
@@ -223,11 +230,17 @@ import atexit
 @atexit.register
 def cleanup():
 	global g_obfsproxyProcess 
+	global g_quitting
+
+	g_quitting = True
 
 	if g_obfsproxyProcess:
 		logging.info("Cleanup Process %d", g_obfsproxyProcess.pid)
 		g_obfsproxyProcess.terminate()
-		g_obfsproxyProcess = None
+		time.sleep(1)
+
+		if g_obfsproxyProcess.poll() is None:
+			g_obfsproxyProcess.kill()
 
 if __name__ == "__main__":
 	main()
