@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# This is control script for obfsproxy for server with obfs2ssh
+# See http://code.google.com/p/obfs2ssh/ for detail
+
+SSH_PORT=22
+OBFS2_PORT=55244
+USER=nogfw
+PID_FILE=/home/$USER/obfsproxy.pid
+OBFSPROXY=/usr/local/bin/obfsproxy
+
+start() {
+	echo "Starting obfsproxy on port $OBFS2_PORT to port $SSH_PORT"
+	start-stop-daemon --start -c $USER -b -m -p $PID_FILE -x $OBFSPROXY -- obfs2 --dest=127.0.0.1:$SSH_PORT server 0.0.0.0:$OBFS2_PORT
+}
+
+stop() {
+	echo "Stopping obfsproxy"
+	start-stop-daemon --stop -c $USER -p $PID_FILE -x $OBFSPROXY --retry TERM/5/KILL/10
+}
+
+status() {
+	obfspid = `pgrep obfsproxy`
+
+	if [ -z $obfspid ]; then
+		echo 'obfsproxy: not running'
+	else
+		echo 'obfsproxy: running'
+	fi
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  
+  stop)
+    stop
+    ;;
+
+  restart|reload|force-reload)
+    stop
+    start
+    ;;
+
+  status)
+    status
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|reload|force-reload|restart|status}"
+    exit 1
+
+esac
+
+exit 0
