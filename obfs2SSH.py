@@ -6,7 +6,7 @@ from getopt import getopt, GetoptError
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -18,6 +18,7 @@ class Configure:
 		self.retriesInterval = config.getint('main', 'retriesInterval')
 		self.sharedSecret = config.get('main', 'sharedSecret')
 		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
+		self.extraOpts = config.get('main', 'extraOpts')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
@@ -207,6 +208,9 @@ def main():
 
 		if g_conf.verbose:
 			plinkCmd += [ '-v' ]
+
+		if g_conf.extraOpts:
+			plinkCmd += g_conf.extraOpts.split(' ')
 
 		plinkCmd += [ '-N' ]
 
