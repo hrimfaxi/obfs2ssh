@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
 from distutils.core import setup
-import py2exe
+import os
+
+if os.name == 'nt':
+	import py2exe
 
 setup(name='obfs2SSH',
       windows=['obfs2SSH'],

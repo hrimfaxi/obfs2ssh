@@ -1,0 +1,64 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          obfs2ssh-client
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: obfsproxy tunnel for SSH
+# Description:       See http://code.google.com/p/obfs2ssh/ for detail
+### END INIT INFO
+
+# This is control script for obfsproxy for client with obfs2ssh
+# See http://code.google.com/p/obfs2ssh/ for detail
+
+USER=nogfw
+PID_FILE=/home/$USER/obfs2SSH.pid
+OBFS2SSH=/usr/local/bin/obfs2SSH
+CONFIG=/home/$USER/obfs2SSH.conf
+
+start() {
+	echo "Starting obfs2SSH"
+	start-stop-daemon --start -c $USER -b -m -p $PID_FILE -x $OBFS2SSH -- -f $CONFIG
+}
+
+stop() {
+	echo "Stopping obfs2SSH"
+	start-stop-daemon --stop -c $USER -p $PID_FILE
+}
+
+status() {
+	obfspid = `pgrep obf2SSH`
+
+	if [ -z $obfspid ]; then
+		echo 'obfs2SSH: not running'
+	else
+		echo 'obfs2SSH: running'
+	fi
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  
+  stop)
+    stop
+    ;;
+
+  restart|reload|force-reload)
+    stop
+    start
+    ;;
+
+  status)
+    status
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|reload|force-reload|restart|status}"
+    exit 1
+
+esac
+
+exit 0
