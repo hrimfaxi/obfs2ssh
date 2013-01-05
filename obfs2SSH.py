@@ -131,12 +131,8 @@ def parseArgv():
 		print str(e)
 		usage()
 		sys.exit(2)
-
-	if configFn == None:
-		usage()
-		sys.exit(2)
 	
-	return configFn
+	return configFn if configFn else "default.conf"
 
 class NullDevice:
     def write(self, s):
