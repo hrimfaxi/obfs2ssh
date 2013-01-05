@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 from distutils.core import setup
+import py2exe
 
 setup(name='obfs2SSH',
+      windows=['obfs2SSH'],
       version='0.0',
       description="Obfsproxy + SSH tunnel to avoid DPI detection",
       author = 'Hrimfaxi',

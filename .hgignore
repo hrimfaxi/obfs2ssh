@@ -2,3 +2,5 @@ syntax: glob
 *~
 *.pyc
 .*sw?
+build/
+dist
