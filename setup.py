@@ -1,10 +1,14 @@
 #!/usr/bin/python
 
 from distutils.core import setup
-import py2exe
+
+try:
+	import py2exe
+except ImportError as e:
+	pass
 
 setup(name='obfs2SSH',
-      windows=['obfs2SSH'],
+      console=['obfs2SSH'],
       version='0.0',
       description="Obfsproxy + SSH tunnel to avoid DPI detection",
       author = 'Hrimfaxi',
