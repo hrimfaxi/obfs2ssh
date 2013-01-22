@@ -4,9 +4,29 @@ import logging, sys, socket, subprocess, threading, time, os.path, os, signal, r
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
+class WinProxy():
+	def enable(self, addr = None):
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 1)
+
+			if addr:
+				_winreg.SetValueEx(key, "ProxyServer", None, _winreg.REG_SZ, addr)
+	def disable(self):
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 0)
+	def get(self):
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+			proxyServer = _winreg.QueryValueEx(key, "ProxyServer")[0]
+			proxyEnabled = _winreg.QueryValueEx(key, "ProxyEnable")[0]
+		return proxyServer, proxyEnabled
+
+if sys.platform == 'win32':
+	import _winreg
+	g_proxy = WinProxy()
+
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -18,6 +38,7 @@ class Configure:
 		self.sharedSecret = config.get('main', 'sharedSecret')
 		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
 		self.extraOpts = config.get('main', 'extraOpts')
+		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
@@ -166,6 +187,7 @@ def onSIGTERM(signum , stack_frame):
 
 def main():
 	global g_conf
+	global g_quitting
 
 	configFn = parseArgv()
 	g_conf = Configure(configFn)
@@ -203,6 +225,15 @@ def main():
 	else:
 		runCmdInThread(obfsproxyCmd)
 
+	if g_conf.win32ProxySetting and sys.platform == 'win32':
+		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
+			tempAddr = g_conf.httpProxyForwardAddr.split(':')[0:2]
+
+			if tempAddr[0] == '0.0.0.0':
+				tempAddr[0] = '127.0.0.1'
+
+			g_proxy.enable(':'.join(tempAddr))
+
 	while not g_quitting:
 		if not g_conf.disableObfs2:
 			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort):
@@ -232,8 +263,12 @@ def main():
 					else '-p', '%d' % (g_conf.SSHPort) ] 
 
 		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
-		retcode = runCmd(plinkCmd)
-		onRetriesDelay(retcode)
+
+		try:
+			retcode = runCmd(plinkCmd)
+			onRetriesDelay(retcode)
+		except KeyboardInterrupt as e:
+			g_quitting = True
 
 import atexit
 
@@ -241,8 +276,12 @@ import atexit
 def cleanup():
 	global g_obfsproxyProcess 
 	global g_quitting
+	global g_proxy
 
 	g_quitting = True
+
+	if g_conf.win32ProxySetting and sys.platform == 'win32':
+		g_proxy.disable()
 
 	if g_obfsproxyProcess:
 		logging.info("Cleanup Process %d", g_obfsproxyProcess.pid)
