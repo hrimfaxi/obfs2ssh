@@ -173,8 +173,14 @@ def main():
 	else:
 		logging.basicConfig(level=logging.DEBUG if g_conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 
-	g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
-	g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
+	while True:
+		try:
+			g_conf.obfs2HostName, g_conf.obfs2Port = convertAddress(g_conf.obfs2Addr)
+			g_conf.SSHHostName, g_conf.SSHPort = convertAddress(g_conf.SSHAddr)
+			break
+		except socket.gaierror as e:
+			logging.info(e)
+
 	del g_conf.obfs2Addr, g_conf.SSHAddr
 	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port) ]
 
