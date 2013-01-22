@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging, sys, socket, subprocess, threading, time, os.path, os, signal
+import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random
 from ConfigParser import *
 from getopt import getopt, GetoptError
 
@@ -10,7 +10,6 @@ class Configure:
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
-		self.SSHAddr= config.get('main', 'SSHAddr')
 		self.clientType = config.get('main', 'clientType')
 		self.httpProxyForwardAddr = config.get('main', 'httpProxyForwardAddr')
 		self.username = config.get('main', 'username')
@@ -22,6 +21,11 @@ class Configure:
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
+
+		try:
+			self.SSHAddr= config.get('main', 'SSHAddr')
+		except NoOptionError as e:
+			self.SSHAddr = "localhost:%d" % (random.randint(1024, 65535))
 
 		try:
 			self.useDaemon = config.getboolean('main', 'useDaemon')
