@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -39,6 +39,7 @@ class Configure:
 		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
 		self.extraOpts = config.get('main', 'extraOpts')
 		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
+		self.startupPage = config.get('main', 'startupPage')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
@@ -185,6 +186,13 @@ def onSIGTERM(signum , stack_frame):
 	cleanup()
 	sys.exit(0)
 
+def openBrowser():
+	time.sleep(8)
+	import webbrowser
+	iexplore = os.path.join(os.environ.get("PROGRAMFILES", "C:\\Program Files"), "Internet Explorer\\IEXPLORE.EXE")
+	ie = webbrowser.get(iexplore)
+	ie.open(g_conf.startupPage)
+
 def main():
 	global g_conf
 	global g_quitting
@@ -233,6 +241,10 @@ def main():
 				tempAddr[0] = '127.0.0.1'
 
 			g_proxy.enable(':'.join(tempAddr))
+
+		t = threading.Thread(target=openBrowser)
+		t.daemon = True
+		t.start()
 
 	while not g_quitting:
 		if not g_conf.disableObfs2:
