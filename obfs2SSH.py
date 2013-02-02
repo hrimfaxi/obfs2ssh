@@ -40,7 +40,7 @@ class Configure:
 		self.extraOpts = config.get('main', 'extraOpts')
 		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
 		self.startupPage = config.get('main', 'startupPage')
-		self.obfsProtocol = config.get('main', 'obfsProtcol')
+		self.obfsProtocol = config.get('main', 'obfsProtocol')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
