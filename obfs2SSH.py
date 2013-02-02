@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -40,6 +40,7 @@ class Configure:
 		self.extraOpts = config.get('main', 'extraOpts')
 		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
 		self.startupPage = config.get('main', 'startupPage')
+		self.obfsProtocol = config.get('main', 'obfsProtcol')
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
@@ -216,7 +217,7 @@ def main():
 			logging.info(e)
 
 	del g_conf.obfs2Addr, g_conf.SSHAddr
-	obfsproxyCmd = [ g_conf.obfs2Path, 'obfs2', '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port) ]
+	obfsproxyCmd = [ g_conf.obfs2Path, g_conf.obfsProtocol, '--dest=%s:%d' % (g_conf.obfs2HostName, g_conf.obfs2Port) ]
 
 	if g_conf.sharedSecret:
 		obfsproxyCmd += [ '--shared-secret=%s' % (g_conf.sharedSecret) ]
