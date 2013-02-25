@@ -1,0 +1,22 @@
+#This is a sample INI for obfs2SSH
+
+[main]
+obfs2Addr = myvps:33274
+SSHAddr = localhost:9901
+clientType = ssh
+useForwardOrSocks = forward
+httpProxyForwardAddr = 0.0.0.0:8119:localhost:8118
+socksPort = 8888
+username = nogfw
+useDaemon = 1
+logFilename = /home/hrimfaxi/nogfw.log
+extraOpts = -o ServerAliveInterval=10 -o ConnectTimeout=10 -C
+obfsProtocol = obfs3
+
+[path]
+Obfs2Path = /home/hrimfaxi/pyobfsproxy/obfsproxy.py
+clientPath = /usr/bin/ssh
+keyFilePath = /home/hrimfaxi/obfs2SSH/Data/nogfw.key
+
+[debug]
+verbose = 0

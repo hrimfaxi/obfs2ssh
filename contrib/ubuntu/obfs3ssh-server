@@ -1,0 +1,70 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          obfs3ssh-server
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: obfsproxy tunnel for SSH
+# Description:       See http://code.google.com/p/obfs2ssh/ for detail
+### END INIT INFO
+
+# This is control script for obfsproxy for server with obfs3ssh
+# See http://code.google.com/p/obfs2ssh/ for detail
+
+SSH_PORT=22
+OBFS3_PORT=33274
+USER=nogfw
+PID_FILE=/home/$USER/obfs3.pid
+OBFSPROXY=/home/$USER/pyobfsproxy/obfsproxy.py
+#SHARED_SECRET_KEY=hackme
+
+if [ ! -z ${SHARED_SECRET_KEY+x} ]; then
+	OBFSPROXY_OPTS=--shared-secret=$SHARED_SECRET_KEY
+fi
+
+start() {
+	echo "Starting obfsproxy on port $OBFS3_PORT to port $SSH_PORT"
+	start-stop-daemon --start -c $USER -b -m -p $PID_FILE -x $OBFSPROXY -- obfs3 --dest=127.0.0.1:$SSH_PORT $OBFSPROXY_OPTS server 0.0.0.0:$OBFS3_PORT
+}
+
+stop() {
+	echo "Stopping obfsproxy"
+	start-stop-daemon --stop -c $USER -p $PID_FILE -x $OBFSPROXY --retry TERM/5/KILL/10
+}
+
+status() {
+	obfspid = `pgrep obfsproxy`
+
+	if [ -z $obfspid ]; then
+		echo 'obfsproxy: not running'
+	else
+		echo 'obfsproxy: running'
+	fi
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  
+  stop)
+    stop
+    ;;
+
+  restart|reload|force-reload)
+    stop
+    start
+    ;;
+
+  status)
+    status
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|reload|force-reload|restart|status}"
+    exit 1
+
+esac
+
+exit 0
