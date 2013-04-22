@@ -1,0 +1,12 @@
+[Unit]
+Description=noGFW daemon
+
+[Service]
+User=hrimfaxi
+ExecStart=/usr/bin/obfs2SSH -f /home/hrimfaxi/obfs2SSH/rc4
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
