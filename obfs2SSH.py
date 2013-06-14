@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -44,6 +44,7 @@ class Configure:
 		self.obfs2Path = config.get('path', 'Obfs2Path')
 		self.clientPath = config.get('path', 'clientPath')
 		self.verbose = config.getboolean('debug', 'verbose')
+		self.disableHostkeyAuth = config.getboolean('main', 'disableHostkeyAuth')
 
 		try:
 			self.SSHAddr= config.get('main', 'SSHAddr')
@@ -88,6 +89,9 @@ def convertAddress(address):
 
 def getSubprocessKwargs():
 	kwargs = {}
+
+	if g_conf.disableHostkeyAuth:
+		kwargs['stdin'] = subprocess.PIPE
 	
 	if g_conf.useDaemon:
 		kwargs['stdout'] = open(os.devnull, 'w')
@@ -101,12 +105,18 @@ def getSubprocessKwargs():
 
 	return kwargs
 
-def runCmd(cmd):
+def runPlinkOrSSH(cmd):
 	cmdStr = " ".join(cmd).strip()
 	logging.info("Executing: %s", cmdStr)
-	retcode = subprocess.call(cmd, **getSubprocessKwargs())
+	p = subprocess.Popen(cmd, **getSubprocessKwargs())
 
-	return retcode
+	if g_conf.disableHostkeyAuth:
+		p.stdin.write("yes\n")
+
+	p.communicate()
+	p.wait()
+
+	return p.code
 
 g_obfsproxyProcess = None
 
@@ -278,7 +288,7 @@ def main():
 		plinkCmd += [ '%s@%s' % (g_conf.username, g_conf.SSHHostName) ]
 
 		try:
-			retcode = runCmd(plinkCmd)
+			retcode = runPlinkOrSSH(plinkCmd)
 			onRetriesDelay(retcode)
 		except KeyboardInterrupt as e:
 			g_quitting = True
