@@ -116,7 +116,7 @@ def runPlinkOrSSH(cmd):
 	p.communicate()
 	p.wait()
 
-	return p.code
+	return p.returncode
 
 g_obfsproxyProcess = None
 
