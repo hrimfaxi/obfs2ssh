@@ -16,4 +16,5 @@ setup(name='obfs2SSH',
       url='http://code.google.com/p/obfs2ssh/',
       scripts = ['obfs2SSH' ],
       py_modules=['obfs2SSH'],
+      license= 'GPL',
 )
