@@ -9,7 +9,7 @@ except ImportError as e:
 
 setup(name='obfs2SSH',
       console=['obfs2SSH'],
-      version='0.0',
+      version='0.1',
       description="Obfsproxy + SSH tunnel to avoid DPI detection",
       author = 'Hrimfaxi',
       author_email = 'outmatch@gmail.com',
