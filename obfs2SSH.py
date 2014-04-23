@@ -277,7 +277,7 @@ def setupLogger(conf):
 	else:
 		logging.basicConfig(level=logging.DEBUG if conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 
-def doSleep(t=0):
+def doSleep(t=1):
 	time.sleep(t if t else g_conf.retriesInterval)
 
 def resolveHostnameAndPort(obfs2Address, sshAddress):
