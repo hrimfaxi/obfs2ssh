@@ -13,14 +13,14 @@
 # See http://code.google.com/p/obfs2ssh/ for detail
 
 SSH_PORT=22
-OBFS3_PORT=33274
-USER=nogfw
-PID_FILE=/home/$USER/obfs3.pid
-OBFSPROXY=/home/$USER/pyobfsproxy/obfsproxy.py
-#SHARED_SECRET_KEY=hackme
+OBFS3_PORT=123
+USER=root
+PID_FILE=/$HOME/.obfs3.pid
 
-if [ ! -z ${SHARED_SECRET_KEY+x} ]; then
-	OBFSPROXY_OPTS=--shared-secret=$SHARED_SECRET_KEY
+if [ -x /usr/local/bin/obfsproxy ]; then
+	OBFSPROXY=/usr/local/bin/obfsproxy
+elif [ -x /usr/bin/obfsproxy ]; then 
+	OBFSPROXY=/usr/bin/obfsproxy
 fi
 
 start() {
