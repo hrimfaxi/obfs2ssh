@@ -13,9 +13,9 @@
 # See http://code.google.com/p/obfs2ssh/ for detail
 
 SSH_PORT=22
-OBFS3_PORT=123
+OBFS3_PORT=23
 USER=root
-PID_FILE=/$HOME/.obfs3.pid
+PID_FILE=/run/obfsproxy.pid
 
 if [ -x /usr/local/bin/obfsproxy ]; then
 	OBFSPROXY=/usr/local/bin/obfsproxy
@@ -30,7 +30,8 @@ start() {
 
 stop() {
 	echo "Stopping obfsproxy"
-	start-stop-daemon --stop -c $USER -p $PID_FILE -x $OBFSPROXY --retry TERM/5/KILL/10
+	start-stop-daemon --stop -c $USER -p $PID_FILE --retry TERM/5/KILL/10
+	rm -f $PID_FILE
 }
 
 status() {
