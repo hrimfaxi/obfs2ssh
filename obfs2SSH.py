@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random
 from ConfigParser import *
@@ -31,7 +31,7 @@ if isWin32():
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '2', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '15', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
