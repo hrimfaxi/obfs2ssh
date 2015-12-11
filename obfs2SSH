@@ -1,5 +1,0 @@
-#!/usr/bin/python2.7
-
-import  obfs2SSH
-
-obfs2SSH.main()
