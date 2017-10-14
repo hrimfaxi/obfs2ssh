@@ -138,7 +138,7 @@ g_obfsproxyProcess = None
 
 def onRetriesDelay(retcode):
 	if not g_quitting:
-		logging.info("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+		logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
 		doSleep()
 
 def obfsproxyThread(cmd):
