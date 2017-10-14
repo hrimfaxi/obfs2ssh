@@ -124,6 +124,7 @@ def runPlinkOrSSH(cmd):
 class ProcessContainer:
 	def __init__(self):
 		self.quitting = False
+		self.process = None
 	def onRetriesDelay(self, retcode):
 		if not self.quitting:
 			logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
@@ -143,6 +144,8 @@ class ProcessContainer:
 				afterRun(self.process)
 	def kill(self, name):
 		self.quitting = True
+		if self.process is None:
+			return
 		logging.info("Cleanup %s Process %d", name, self.process.pid)
 		self.process.terminate()
 		doSleep()
