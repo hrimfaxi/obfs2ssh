@@ -317,6 +317,7 @@ def main():
 		def bandwidth_thread():
 			tcprelay_secret_exp.forwarder('127.0.0.1', int(proxy_port), ['127.0.0.1'], g_conf.bandwidthPort, '1', g_conf.bandwidthKey)
 			tcprelay_secret_exp.asyncore.loop()
+		logging.info("Using bandwidth obfs with port %d" % (g_conf.bandwidthPort))
 		runInBackgroundThread(bandwidth_thread, tuple())
 
 	if g_conf.win32ProxySetting:
