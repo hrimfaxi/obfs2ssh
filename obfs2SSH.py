@@ -31,7 +31,7 @@ if isWin32():
 
 class Configure:
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '15', 'disableObfs2': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
+		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '15', 'usePlainSSH': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
 		self.obfs2Addr = config.get('main', 'obfs2Addr')
@@ -41,7 +41,7 @@ class Configure:
 		self.useForwardOrSocks = config.get('main', 'useForwardOrSocks')
 		self.retriesInterval = config.getint('main', 'retriesInterval')
 		self.sharedSecret = config.get('main', 'sharedSecret')
-		self.disableObfs2 = config.getboolean('main', 'disableObfs2')
+		self.usePlainSSH = config.getboolean('main', 'usePlainSSH')
 		self.extraOpts = config.get('main', 'extraOpts')
 		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
 		self.startupPage = config.get('main', 'startupPage')
@@ -311,7 +311,7 @@ def main():
 			raise RuntimeError('Cannot run as daemon in Windows')
 		daemonize()
 
-	if g_conf.disableObfs2:
+	if g_conf.usePlainSSH:
 		g_conf.SSHHostName, g_conf.SSHPort = g_conf.obfs2HostName, g_conf.obfs2Port
 	else:
 		runObfsproxy(obfsproxyCmd)
@@ -331,7 +331,7 @@ def main():
 		t.start()
 
 	while not g_quitting:
-		if not g_conf.disableObfs2:
+		if not g_conf.usePlainSSH:
 			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
 				doSleep()
 
