@@ -141,6 +141,7 @@ class ProcessContainer:
 			if afterRun:
 				afterRun(self.process)
 	def kill(self, name):
+		self.quitting = True
 		logging.info("Cleanup %s Process %d", name, self.process.pid)
 		self.process.terminate()
 		doSleep()
