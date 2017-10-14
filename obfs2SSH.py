@@ -367,9 +367,15 @@ def main():
 
 	if g_conf.win32ProxySetting:
 		logging.info("Setup Proxy")
-		tempAddr = getHttpForwardAddress(g_conf)
-		tempAddr[1] = str(tempAddr[1])
-		tempAddr = ':'.join(tempAddr)
+		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
+			tempAddr = getHttpForwardAddress(g_conf)
+			tempAddr[1] = str(tempAddr[1])
+			tempAddr = ':'.join(tempAddr)
+		elif g_conf.useForwardOrSocks.upper() == 'SOCKS':
+			tempAddr = getSocks5Address(g_conf)
+			tempAddr[1] = str(tempAddr[1])
+			tempAddr = ':'.join(tempAddr)
+			tempAddr = "socks=" + tempAddr
 		sysproxy_cmd = [ g_conf.sysproxyPath, 'global', tempAddr,
 				'<local>;localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;172.32.*;192.168.*'
 				]
