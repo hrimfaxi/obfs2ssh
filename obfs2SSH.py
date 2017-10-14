@@ -13,7 +13,6 @@ class Configure:
 			'clientType': 'plink',
 			'useForwardOrSocks': 'forward',
 			'username': 'nogfw',
-			'useDaemon': 'False',
 			'retriesInterval': '15',
 			'usePlainSSH': 'False',
 			'sharedSecret': '',
@@ -46,9 +45,7 @@ class Configure:
 				[ "path", "clientPath", "str" ],
 				[ "debug", "verbose", "bool" ],
 				[ "main", "SSHAddr", "str", "localhost:%d" % (random.randint(1024, 65535)) ],
-				[ "main", "useDaemon", "bool", False ],
 				[ "main", "logFilename", "str", None ],
-				[ "main", "useDaemon", "bool", False ],
 				[ "main", "socksPort", "int", None ],
 				[ "main", "bandwidthPort", "int", None ],
 				[ "main", "bandwidthKey", "str", None ],
@@ -94,10 +91,6 @@ def getSubprocessKwargs():
 	# take control of stdin if host key auth is disabled
 	if g_conf.disableHostkeyAuth:
 		kwargs['stdin'] = subprocess.PIPE
-
-	if g_conf.useDaemon:
-		kwargs['stdout'] = open(os.devnull, 'w')
-		kwargs['stderr'] = subprocess.STDOUT
 
 	if subprocess.mswindows:
 		su = subprocess.STARTUPINFO()
@@ -270,9 +263,8 @@ def generateObfsproxyCmd(conf):
 	return obfsproxyCmd
 
 def setupLogger(conf):
-	if conf.useDaemon:
-		if conf.logFilename:
-			logging.basicConfig(filename=conf.logFilename, level=logging.DEBUG if conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
+	if conf.logFilename:
+		logging.basicConfig(filename=conf.logFilename, level=logging.DEBUG if conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 	else:
 		logging.basicConfig(level=logging.DEBUG if conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 
@@ -344,11 +336,6 @@ def main():
 	g_conf.SSHHostName, g_conf.SSHPort = resolveHost(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
 	obfsproxyCmd = generateObfsproxyCmd(g_conf)
-
-	if g_conf.useDaemon:
-		if isWin32():
-			raise RuntimeError('Cannot run as daemon in Windows')
-		daemonize()
 
 	if g_conf.usePlainSSH:
 		g_conf.SSHHostName, g_conf.SSHPort = g_conf.obfs2HostName, g_conf.obfs2Port
