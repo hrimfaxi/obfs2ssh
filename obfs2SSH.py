@@ -102,20 +102,6 @@ def getSubprocessKwargs():
 
 	return kwargs
 
-def runPlinkOrSSH(cmd):
-	cmdStr = " ".join(cmd).strip()
-	logging.info("Executing: %s", cmdStr)
-	p = subprocess.Popen(cmd, **getSubprocessKwargs())
-
-	# write 'yes' if hostkey auth is disabled
-	if g_conf.disableHostkeyAuth:
-		p.stdin.write("yes\n")
-
-	p.communicate()
-	p.wait()
-
-	return p.returncode
-
 class ProcessContainer:
 	def __init__(self):
 		self.quitting = False
@@ -150,10 +136,7 @@ class ProcessContainer:
 
 def runInBackground(cmd):
 	c = ProcessContainer()
-	t = threading.Thread(target=c.run, args=(cmd,))
-	t.daemon = True
-	t.start()
-
+	runInBackgroundThread(c.run, (cmd,))
 	return c
 
 def runInBackgroundThread(func, args):
@@ -179,28 +162,6 @@ def checkReachable(ip, port, timeout=5, complex=True):
 		return False
 
 	return True
-
-class NullDevice:
-    def write(self, s):
-        pass
-
-def daemonize():
-        sys.stdin.close()
-        sys.stdout = NullDevice()
-        sys.stderr = NullDevice()
-        pid = os.fork()
-
-        if pid == 0:
-                os.setsid()
-                pid = os.fork()
-
-                if pid == 0:
-                        os.umask(0)
-                        os.chdir('/')
-                else:
-                        os._exit(0)
-        else:
-                os._exit(0)
 
 def onSIGTERM(signum , stack_frame):
 	cleanup()
