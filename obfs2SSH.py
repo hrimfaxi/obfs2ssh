@@ -137,11 +137,11 @@ class ProcessContainer:
 			cmdStr = " ".join(cmd).strip()
 			logging.info("Executing: %s", cmdStr)
 			self.process = subprocess.Popen(cmd, **getSubprocessKwargs())
+			if afterRun:
+				afterRun(self.process)
 			self.process.communicate()
 			retcode = self.process.wait()
 			self.onRetriesDelay(retcode)
-			if afterRun:
-				afterRun(self.process)
 	def kill(self, name):
 		self.quitting = True
 		if self.process is None:
