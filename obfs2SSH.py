@@ -53,6 +53,16 @@ class Configure:
 				[ "path", "obfs2Path", "str" ],
 				[ "path", "clientPath", "str" ],
 				[ "debug", "verbose", "bool" ],
+				[ "main", "SSHAddr", "str", "localhost:%d" % (random.randint(1024, 65535)) ],
+				[ "main", "useDaemon", "bool", False ],
+				[ "main", "logFilename", "str", None ],
+				[ "main", "useDaemon", "bool", False ],
+				[ "main", "socksPort", "int", None ],
+				[ "main", "bandwidthPort", "int", None ],
+				[ "main", "bandwidthKey", "str", None ],
+				[ "path", "keyFilePath", "str", None ],
+				[ "path", "bandwidthPath", "str", None ],
+				[ "path", "sysproxyPath", "str", None ],
 		]
 
 		for e in conf_list:
@@ -62,47 +72,13 @@ class Configure:
 				getter = config.getboolean
 			elif e[2] == "int":
 				getter = config.getint
-			setattr(self, e[1], getter(e[0], e[1]))
-
-		try:
-			self.SSHAddr= config.get('main', 'SSHAddr')
-		except NoOptionError as e:
-			self.SSHAddr = "localhost:%d" % (random.randint(1024, 65535))
-
-		try:
-			self.useDaemon = config.getboolean('main', 'useDaemon')
-		except NoOptionError as e:
-			self.useDaemon = False
-
-		try:
-			self.logFilename = config.get('main', 'logFilename')
-		except NoOptionError as e:
-			self.logFilename = None
-
-		try:
-			self.socksPort = config.getint('main', 'socksPort')
-		except NoOptionError as e:
-			self.socksPort = None
-
-		try:
-			self.keyFilePath = config.get('path', 'keyFilePath')
-		except NoOptionError as e:
-			self.keyFilePath = None
-
-		try:
-			self.bandwidthPort = config.getint('main', 'bandwidthPort')
-		except NoOptionError as e:
-			self.bandwidthPort = None
-
-		try:
-			self.bandwidthKey = config.get('main', 'bandwidthKey')
-		except NoOptionError as e:
-			self.bandwidthKey = None
-
-		try:
-			self.bandwidthPath = config.get('path', 'bandwidthPath')
-		except NoOptionError as e:
-			self.bandwidthPath = None
+			try:
+				setattr(self, e[1], getter(e[0], e[1]))
+			except NoOptionError:
+				if len(e) < 4:
+					raise RuntimeError("%s: %s must be supplied" % (e[0], e[1]))
+				else:
+					setattr(self, e[1], e[3])
 
 		if self.useForwardOrSocks.upper() != 'FORWARD' and self.useForwardOrSocks.upper() != 'SOCKS':
 			raise RuntimeError("Invalid mode for useForwardOrSocks: %s" % (self.useForwardOrSocks))
