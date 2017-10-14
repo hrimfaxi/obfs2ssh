@@ -1,8 +1,7 @@
 #!/usr/bin/python2
 
-import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random
+import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random, argparse
 from ConfigParser import *
-from getopt import getopt, GetoptError
 
 class WinProxy():
 	def enable(self, addr = None):
@@ -174,22 +173,6 @@ def checkReachable(ip, port, timeout=5, complex=True):
 def usage():
 	print ("%s: -f <config>" % (sys.argv[0]))
 
-def parseArgv():
-	configFn = None
-
-	try:
-		optlist, args = getopt(sys.argv[1:], 'f:')
-
-		for o, a in optlist:
-			if o == '-f':
-				configFn = a
-	except GetoptError as e:
-		print str(e)
-		usage()
-		sys.exit(2)
-	
-	return configFn if configFn else "default.conf"
-
 class NullDevice:
     def write(self, s):
         pass
@@ -316,7 +299,12 @@ def main():
 	global g_conf
 	global g_quitting
 
-	configFn = parseArgv()
+	parser = argparse.ArgumentParser('obfs2ssh')
+	parser.add_argument('config_filename', help='Configure file')
+
+	args = parser.parse_args();
+	configFn = args.configFn
+
 	g_conf = Configure(configFn)
 	signal.signal(signal.SIGTERM, onSIGTERM)
 	setupLogger(g_conf)
