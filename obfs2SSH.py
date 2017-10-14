@@ -89,13 +89,6 @@ class Configure:
 g_conf = None
 g_quitting = False
 
-def convertAddress(address):
-	host, port = address.split(':')
-	port = int(port)
-	ip = socket.gethostbyname(host)
-
-	return ip, port
-
 def getSubprocessKwargs():
 	kwargs = {}
 
@@ -267,12 +260,14 @@ def doSleep(t=1):
 def resolveHost(address):
 	while True:
 		try:
-			hostname, port = convertAddress(address)
+			host, port = address.split(':')
+			port = int(port)
+			ip = socket.gethostbyname(host)
 			break
 		except socket.gaierror as e:
 			logging.info(e)
 			doSleep()
-	return hostname, port
+	return ip, port
 
 def getHttpForwardAddress(conf):
 	# returns http forward address like ['127.0.0.1', 3128]
