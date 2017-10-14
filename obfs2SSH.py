@@ -3,32 +3,10 @@
 import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random, argparse
 from ConfigParser import *
 
-class WinProxy():
-	REG_INTERNET_SETTINGS = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
-	def enable(self, addr = None):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
-			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 1)
-
-			if addr:
-				_winreg.SetValueEx(key, "ProxyServer", None, _winreg.REG_SZ, addr)
-	def enableSocks5(self, addr):
-		self.enable("socks=" + addr)
-	def disable(self):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
-			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 0)
-	def get(self):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
-			proxyServer = _winreg.QueryValueEx(key, "ProxyServer")[0]
-			proxyEnabled = _winreg.QueryValueEx(key, "ProxyEnable")[0]
-		return proxyServer, proxyEnabled
-
 def isWin32():
 	return True if sys.platform == 'win32' else False
 
-g_proxy = None
-if isWin32():
-	import _winreg
-	g_proxy = WinProxy()
+g_proxy = False
 
 class Configure:
 	def __init__(self, fname):
@@ -321,6 +299,7 @@ def getSocks5Address(conf):
 def main():
 	global g_conf
 	global g_quitting
+	global g_proxy
 
 	parser = argparse.ArgumentParser('obfs2ssh')
 	parser.add_argument('config_filename', help='Configure file')
@@ -346,19 +325,27 @@ def main():
 		runInBackground(obfsproxyCmd)
 
 	if g_conf.useBandWidthObfs:
-		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', g_conf.httpProxyForwardAddr.split(':')[-1], '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
+		splited = g_conf.httpProxyForwardAddr.split(':')
+		if len(splited) <= 3:
+			proxy_port = splited[0]
+		else:
+			proxy_port = splited[1]
+		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', proxy_port, '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
 		logging.info(bandwidthCmd)
 		runInBackground(bandwidthCmd, 'bandwidthThread')
 
-	if g_proxy:
-		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
-			tempAddr = getHttpForwardAddress(g_conf)
-			tempAddr[1] = '%d'%(tempAddr[1])
-			g_proxy.enable(':'.join(tempAddr))
-		else:
-			tempAddr = getSocks5Address(g_conf)
-			tempAddr[1] = '%d'%(tempAddr[1])
-			g_proxy.enableSocks5(':'.join(tempAddr))
+	if g_conf.win32ProxySetting:
+		logging.info("Setup Proxy")
+		tempAddr = getHttpForwardAddress(g_conf)
+		tempAddr[1] = str(tempAddr[1])
+		tempAddr = ':'.join(tempAddr)
+		sysproxy_cmd = [ g_conf.sysproxyPath, 'global', tempAddr,
+				'<local>;localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;172.32.*;192.168.*'
+				]
+		logging.info(sysproxy_cmd)
+		rc = subprocess.call(sysproxy_cmd)
+		if rc == 0:
+			g_proxy = True
 
 		t = threading.Thread(target=openBrowser)
 		t.daemon = True
@@ -386,6 +373,7 @@ def cleanup():
 	global g_bandwidthProcess
 	global g_quitting
 	global g_proxy
+	global g_conf
 
 	g_quitting = True
 
@@ -394,7 +382,7 @@ def cleanup():
 
 	if g_proxy:
 		logging.info("Disable Proxy Settings")
-		g_proxy.disable()
+		subprocess.call([ g_conf.sysproxyPath, 'global', ''])
 
 	if g_obfsproxyProcess:
 		logging.info("Cleanup Obfsproxy Process %d", g_obfsproxyProcess.pid)
