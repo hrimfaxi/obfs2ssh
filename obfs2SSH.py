@@ -371,6 +371,9 @@ def cleanup():
 
 	g_quitting = True
 
+	if g_conf is None:
+		return
+
 	if g_conf.win32ProxySetting and isWin32():
 		g_proxy.disable()
 
