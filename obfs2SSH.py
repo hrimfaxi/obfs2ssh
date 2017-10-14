@@ -362,7 +362,6 @@ def main():
 		else:
 			proxy_port = splited[1]
 		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', proxy_port, '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
-		logging.info(bandwidthCmd)
 		g_bandwidth = runInBackground(bandwidthCmd)
 
 	if g_conf.win32ProxySetting:
@@ -379,7 +378,7 @@ def main():
 		sysproxy_cmd = [ g_conf.sysproxyPath, 'global', tempAddr,
 				'<local>;localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;172.32.*;192.168.*'
 				]
-		logging.info(sysproxy_cmd)
+		logging.debug(' '.join(sysproxy_cmd))
 		rc = subprocess.call(sysproxy_cmd)
 		if rc == 0:
 			g_proxy = True
