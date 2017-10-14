@@ -86,7 +86,6 @@ class Configure:
 				raise RuntimeError("bandwidth obfs key should be 16 bytes hexstring")
 
 g_conf = None
-g_quitting = False
 
 def getSubprocessKwargs():
 	kwargs = {}
@@ -128,14 +127,19 @@ class ProcessContainer:
 		if not self.quitting:
 			logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
 			doSleep()
-	def thread(self, cmd):
+	def run(self, cmd, beforeRun=None, afterRun=None):
 		while not self.quitting:
+			if beforeRun:
+				beforeRun()
+
 			cmdStr = " ".join(cmd).strip()
 			logging.info("Executing: %s", cmdStr)
 			self.process = subprocess.Popen(cmd, **getSubprocessKwargs())
 			self.process.communicate()
 			retcode = self.process.wait()
 			self.onRetriesDelay(retcode)
+			if afterRun:
+				afterRun(self.process)
 	def kill(self, name):
 		logging.info("Cleanup %s Process %d", name, self.process.pid)
 		self.process.terminate()
@@ -146,7 +150,7 @@ class ProcessContainer:
 
 def runInBackground(cmd):
 	c = ProcessContainer()
-	t = threading.Thread(target=c.thread, args=(cmd,))
+	t = threading.Thread(target=c.run, args=(cmd,))
 	t.daemon = True
 	t.start()
 
@@ -305,14 +309,20 @@ def getSocks5Address(conf):
 g_obfsproxy = None
 g_bandwidth = None
 
-def onRetriesDelay(retcode):
-	if not g_quitting:
-		logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
-		doSleep()
+def waitForObfs():
+	if not g_conf.usePlainSSH:
+		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
+			doSleep()
+
+		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
+
+def writeYes(process):
+	# write 'yes' if hostkey auth is disabled
+	if g_conf.disableHostkeyAuth:
+		process.stdin.write("yes\n")
 
 def main():
 	global g_conf
-	global g_quitting
 	global g_proxy
 	global g_obfsproxy
 	global g_bandwidth
@@ -372,19 +382,12 @@ def main():
 			doSleep()
 		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
 
-	while not g_quitting:
-		if not g_conf.usePlainSSH:
-			while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
-				doSleep()
-
-			logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
-		try:
-			plinkCmd = generatePlinkOrSSHCmd(g_conf)
-			logging.debug("Executing: %s", plinkCmd)
-			retcode = runPlinkOrSSH(plinkCmd)
-			onRetriesDelay(retcode)
-		except KeyboardInterrupt as e:
-			g_quitting = True
+	plink = ProcessContainer()
+	plinkCmd = generatePlinkOrSSHCmd(g_conf)
+	try:
+		plink.run(plinkCmd, beforeRun=waitForObfs, afterRun=writeYes)
+	except KeyboardInterrupt as e:
+		plink.quitting = True
 
 import atexit
 
@@ -392,11 +395,8 @@ import atexit
 def cleanup():
 	global g_obfsproxy
 	global g_bandwidth
-	global g_quitting
 	global g_proxy
 	global g_conf
-
-	g_quitting = True
 
 	if g_conf is None:
 		return
