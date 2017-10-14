@@ -4,8 +4,9 @@ import logging, sys, socket, subprocess, threading, time, os.path, os, signal, r
 from ConfigParser import *
 
 class WinProxy():
+	REG_INTERNET_SETTINGS = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
 	def enable(self, addr = None):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
 			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 1)
 
 			if addr:
@@ -13,10 +14,10 @@ class WinProxy():
 	def enableSocks5(self, addr):
 		self.enable("socks=" + addr)
 	def disable(self):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
 			_winreg.SetValueEx(key, "ProxyEnable", None, _winreg.REG_DWORD, 0)
 	def get(self):
-		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, _winreg.KEY_ALL_ACCESS) as key:
+		with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, self.REG_INTERNET_SETTINGS, 0, _winreg.KEY_ALL_ACCESS) as key:
 			proxyServer = _winreg.QueryValueEx(key, "ProxyServer")[0]
 			proxyEnabled = _winreg.QueryValueEx(key, "ProxyEnable")[0]
 		return proxyServer, proxyEnabled
@@ -163,9 +164,6 @@ def checkReachable(ip, port, timeout=5, complex=True):
 		return False
 
 	return True
-
-def usage():
-	print ("%s: -f <config>" % (sys.argv[0]))
 
 class NullDevice:
     def write(self, s):
