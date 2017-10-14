@@ -19,7 +19,7 @@ class Configure:
 			'sharedSecret': '',
 			'extraOpts': '',
 			'win32ProxySetting': 'True',
-			'startupPage': 'https://check.torproject.org/?lang=zh_CN',
+			'startupPage': 'http://www.ip138.com',
 			'obfsProtocol': 'obfs2',
 			'disableHostkeyAuth' : 'True'
 	}
