@@ -37,6 +37,7 @@ class Configure:
 				[ "main", "usePlainSSH", "bool" ],
 				[ "main", "extraOpts", "str" ],
 				[ "main", "win32ProxySetting", "bool" ],
+				[ "main", "win32OpenBrowser", "bool", False ],
 				[ "main", "startupPage", "str" ],
 				[ "main", "obfsProtocol", "str" ],
 				[ "main", "disableHostkeyAuth", "bool" ],
@@ -374,6 +375,7 @@ def main():
 		if rc == 0:
 			g_proxy = True
 
+	if g_conf.win32OpenBrowser:
 		t = threading.Thread(target=openBrowser)
 		t.daemon = True
 		t.start()
