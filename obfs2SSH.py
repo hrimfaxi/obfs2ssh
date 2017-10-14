@@ -24,6 +24,7 @@ class WinProxy():
 def isWin32():
 	return True if sys.platform == 'win32' else False
 
+g_proxy = None
 if isWin32():
 	import _winreg
 	g_proxy = WinProxy()
@@ -320,7 +321,7 @@ def main():
 	else:
 		runObfsproxy(obfsproxyCmd)
 
-	if g_conf.win32ProxySetting and isWin32():
+	if g_proxy:
 		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
 			tempAddr = getHttpForwardAddress(g_conf)
 			tempAddr[1] = '%d'%(tempAddr[1])
@@ -360,7 +361,7 @@ def cleanup():
 	if g_conf is None:
 		return
 
-	if g_conf.win32ProxySetting and isWin32():
+	if g_proxy:
 		g_proxy.disable()
 
 	if g_obfsproxyProcess:
