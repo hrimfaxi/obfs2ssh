@@ -375,3 +375,5 @@ def cleanup():
 
 if __name__ == "__main__":
 	main()
+
+# vim: set tabstop=4 sw=4 noexpandtab :
