@@ -35,22 +35,33 @@ class Configure:
 		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '15', 'usePlainSSH': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
 		config = ConfigParser(defaultConfig)
 		config.read(fname)
-		self.obfs2Addr = config.get('main', 'obfs2Addr')
-		self.clientType = config.get('main', 'clientType')
-		self.httpProxyForwardAddr = config.get('main', 'httpProxyForwardAddr')
-		self.username = config.get('main', 'username')
-		self.useForwardOrSocks = config.get('main', 'useForwardOrSocks')
-		self.retriesInterval = config.getint('main', 'retriesInterval')
-		self.sharedSecret = config.get('main', 'sharedSecret')
-		self.usePlainSSH = config.getboolean('main', 'usePlainSSH')
-		self.extraOpts = config.get('main', 'extraOpts')
-		self.win32ProxySetting = config.getboolean('main', 'win32ProxySetting')
-		self.startupPage = config.get('main', 'startupPage')
-		self.obfsProtocol = config.get('main', 'obfsProtocol')
-		self.obfs2Path = config.get('path', 'Obfs2Path')
-		self.clientPath = config.get('path', 'clientPath')
-		self.verbose = config.getboolean('debug', 'verbose')
-		self.disableHostkeyAuth = config.getboolean('main', 'disableHostkeyAuth')
+		conf_list = [
+				[ "main", "obfs2Addr", "str" ],
+				[ "main", "clientType", "str" ],
+				[ "main", "httpProxyForwardAddr", "str" ],
+				[ "main", "username", "str" ],
+				[ "main", "useForwardOrSocks", "str" ],
+				[ "main", "retriesInterval", "int" ],
+				[ "main", "sharedSecret", "str" ],
+				[ "main", "usePlainSSH", "bool" ],
+				[ "main", "extraOpts", "str" ],
+				[ "main", "win32ProxySetting", "bool" ],
+				[ "main", "startupPage", "str" ],
+				[ "main", "obfsProtocol", "str" ],
+				[ "main", "disableHostkeyAuth", "bool" ],
+				[ "path", "obfs2Path", "str" ],
+				[ "path", "clientPath", "str" ],
+				[ "debug", "verbose", "bool" ],
+		]
+
+		for e in conf_list:
+			if e[2] == "str":
+				getter = config.get
+			elif e[2] == "bool":
+				getter = config.getboolean
+			elif e[2] == "int":
+				getter = config.getint
+			setattr(self, e[1], getter(e[0], e[1]))
 
 		try:
 			self.SSHAddr= config.get('main', 'SSHAddr')
