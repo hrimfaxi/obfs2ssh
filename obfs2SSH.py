@@ -366,6 +366,7 @@ def cleanup():
 		return
 
 	if g_proxy:
+		logging.info("Disable Proxy Settings")
 		g_proxy.disable()
 
 	if g_obfsproxyProcess:
