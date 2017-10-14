@@ -121,43 +121,36 @@ def runPlinkOrSSH(cmd):
 
 	return p.returncode
 
-g_obfsproxyProcess = None
-g_bandwidthProcess = None
-
-def onRetriesDelay(retcode):
-	if not g_quitting:
-		logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+class ProcessContainer:
+	def __init__(self):
+		self.quitting = False
+	def onRetriesDelay(self, retcode):
+		if not self.quitting:
+			logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+			doSleep()
+	def thread(self, cmd):
+		while not self.quitting:
+			cmdStr = " ".join(cmd).strip()
+			logging.info("Executing: %s", cmdStr)
+			self.process = subprocess.Popen(cmd, **getSubprocessKwargs())
+			self.process.communicate()
+			retcode = self.process.wait()
+			self.onRetriesDelay(retcode)
+	def kill(self, name):
+		logging.info("Cleanup %s Process %d", name, self.process.pid)
+		self.process.terminate()
 		doSleep()
 
-def obfsproxyThread(cmd):
-	global g_obfsproxyProcess
+		if self.process.poll() is None:
+			self.process.kill()
 
-	while not g_quitting:
-		cmdStr = " ".join(cmd).strip()
-		logging.info("Executing: %s", cmdStr)
-		g_obfsproxyProcess = subprocess.Popen(cmd, **getSubprocessKwargs())
-		g_obfsproxyProcess.communicate()
-		retcode = g_obfsproxyProcess.wait()
-		onRetriesDelay(retcode)
-
-def bandwidthThread(cmd):
-	global g_bandwidthProcess
-
-	while not g_quitting:
-		cmdStr = " ".join(cmd).strip()
-		logging.info("Executing: %s", cmdStr)
-		g_bandwidthProcess = subprocess.Popen(cmd, **getSubprocessKwargs())
-		g_bandwidthProcess.communicate()
-		retcode = g_bandwidthProcess.wait()
-		onRetriesDelay(retcode)
-
-def runInBackground(cmd, type='obfsproxyThread'):
-	if type == 'bandwidthThread':
-		t = threading.Thread(target=bandwidthThread, args=(cmd,))
-	else:
-		t = threading.Thread(target=obfsproxyThread, args=(cmd,))
+def runInBackground(cmd):
+	c = ProcessContainer()
+	t = threading.Thread(target=c.thread, args=(cmd,))
 	t.daemon = True
 	t.start()
+
+	return c
 
 def checkReachable(ip, port, timeout=5, complex=True):
 	try:
@@ -309,10 +302,20 @@ def getHttpForwardAddress(conf):
 def getSocks5Address(conf):
 	return ['localhost', conf.socksPort]
 
+g_obfsproxy = None
+g_bandwidth = None
+
+def onRetriesDelay(retcode):
+	if not g_quitting:
+		logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
+		doSleep()
+
 def main():
 	global g_conf
 	global g_quitting
 	global g_proxy
+	global g_obfsproxy
+	global g_bandwidth
 
 	parser = argparse.ArgumentParser('obfs2ssh')
 	parser.add_argument('config_filename', help='Configure file')
@@ -335,7 +338,7 @@ def main():
 	if g_conf.usePlainSSH:
 		g_conf.SSHHostName, g_conf.SSHPort = g_conf.obfs2HostName, g_conf.obfs2Port
 	else:
-		runInBackground(obfsproxyCmd)
+		g_obfsproxy = runInBackground(obfsproxyCmd)
 
 	if g_conf.useBandWidthObfs:
 		splited = g_conf.httpProxyForwardAddr.split(':')
@@ -345,7 +348,7 @@ def main():
 			proxy_port = splited[1]
 		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', proxy_port, '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
 		logging.info(bandwidthCmd)
-		runInBackground(bandwidthCmd, 'bandwidthThread')
+		g_bandwidth = runInBackground(bandwidthCmd)
 
 	if g_conf.win32ProxySetting:
 		logging.info("Setup Proxy")
@@ -363,6 +366,11 @@ def main():
 		t = threading.Thread(target=openBrowser)
 		t.daemon = True
 		t.start()
+
+	if not g_conf.usePlainSSH:
+		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
+			doSleep()
+		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
 
 	while not g_quitting:
 		if not g_conf.usePlainSSH:
@@ -382,8 +390,8 @@ import atexit
 
 @atexit.register
 def cleanup():
-	global g_obfsproxyProcess
-	global g_bandwidthProcess
+	global g_obfsproxy
+	global g_bandwidth
 	global g_quitting
 	global g_proxy
 	global g_conf
@@ -397,21 +405,11 @@ def cleanup():
 		logging.info("Disable Proxy Settings")
 		subprocess.call([ g_conf.sysproxyPath, 'global', ''])
 
-	if g_obfsproxyProcess:
-		logging.info("Cleanup Obfsproxy Process %d", g_obfsproxyProcess.pid)
-		g_obfsproxyProcess.terminate()
-		doSleep()
+	if g_obfsproxy:
+		g_obfsproxy.kill("Obfsproxy")
 
-		if g_obfsproxyProcess.poll() is None:
-			g_obfsproxyProcess.kill()
-
-	if g_bandwidthProcess:
-		logging.info("Cleanup Bandwidth Process %d", g_bandwidthProcess.pid)
-		g_bandwidthProcess.terminate()
-		doSleep()
-
-		if g_bandwidthProcess.poll() is None:
-			g_bandwidthProcess.kill()
+	if g_bandwidth:
+		g_bandwidth.kill("Bandwidth")
 
 if __name__ == "__main__":
 	main()
