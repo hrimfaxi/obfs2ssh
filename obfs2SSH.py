@@ -4,7 +4,7 @@ import logging, sys, socket, subprocess, threading, time, os.path, os, signal, r
 from ConfigParser import *
 
 def isWin32():
-	return True if sys.platform == 'win32' else False
+	return sys.platform == 'win32'
 
 g_proxy = False
 
