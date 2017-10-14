@@ -383,11 +383,6 @@ def main():
 		t.daemon = True
 		t.start()
 
-	if not g_conf.usePlainSSH:
-		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
-			doSleep()
-		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
-
 	plink = ProcessContainer()
 	plinkCmd = generatePlinkOrSSHCmd(g_conf)
 	try:
