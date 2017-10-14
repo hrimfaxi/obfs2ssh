@@ -320,7 +320,7 @@ def main():
 		logging.info("Using bandwidth obfs with port %d" % (g_conf.bandwidthPort))
 		runInBackgroundThread(bandwidth_thread, tuple())
 
-	if g_conf.win32ProxySetting:
+	if isWin32() and g_conf.win32ProxySetting:
 		logging.info("Setup Proxy")
 		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
 			tempAddr = getHttpForwardAddress(g_conf)
@@ -339,7 +339,7 @@ def main():
 		if rc == 0:
 			g_proxy = True
 
-	if g_conf.win32OpenBrowser:
+	if isWin32() and g_conf.win32OpenBrowser:
 		t = threading.Thread(target=openBrowser)
 		t.daemon = True
 		t.start()
