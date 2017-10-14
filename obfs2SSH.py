@@ -263,17 +263,15 @@ def setupLogger(conf):
 def doSleep(t=1):
 	time.sleep(t if t else g_conf.retriesInterval)
 
-def resolveHostnameAndPort(obfs2Address, sshAddress):
+def resolveHost(address):
 	while True:
 		try:
-			obfs2Hostname, obfs2Port = convertAddress(obfs2Address)
-			sshHostname, sshPort = convertAddress(sshAddress)
+			hostname, port = convertAddress(address)
 			break
 		except socket.gaierror as e:
 			logging.info(e)
 			doSleep()
-
-	return obfs2Hostname, obfs2Port, sshHostname, sshPort
+	return hostname, port
 
 def getHttpForwardAddress(conf):
 	# returns http forward address like ['127.0.0.1', 3128]
@@ -303,12 +301,12 @@ def main():
 	parser.add_argument('config_filename', help='Configure file')
 
 	args = parser.parse_args();
-	configFn = args.configFn
-
-	g_conf = Configure(configFn)
+	g_conf = Configure(args.config_filename)
 	signal.signal(signal.SIGTERM, onSIGTERM)
 	setupLogger(g_conf)
-	g_conf.obfs2HostName, g_conf.obfs2Port, g_conf.SSHHostName, g_conf.SSHPort = resolveHostnameAndPort(g_conf.obfs2Addr, g_conf.SSHAddr)
+
+	g_conf.obfs2HostName, g_conf.obfs2Port = resolveHost(g_conf.obfs2Addr)
+	g_conf.SSHHostName, g_conf.SSHPort = resolveHost(g_conf.SSHAddr)
 	del g_conf.obfs2Addr, g_conf.SSHAddr
 	obfsproxyCmd = generateObfsproxyCmd(g_conf)
 
