@@ -9,9 +9,22 @@ def isWin32():
 g_proxy = False
 
 class Configure:
+	DEFAULTCONFIG = {
+			'clientType': 'plink',
+			'useForwardOrSocks': 'forward',
+			'username': 'nogfw',
+			'useDaemon': 'False',
+			'retriesInterval': '15',
+			'usePlainSSH': 'False',
+			'sharedSecret': '',
+			'extraOpts': '',
+			'win32ProxySetting': 'True',
+			'startupPage': 'https://check.torproject.org/?lang=zh_CN',
+			'obfsProtocol': 'obfs2',
+			'disableHostkeyAuth' : 'True'
+	}
 	def __init__(self, fname):
-		defaultConfig = { 'clientType': 'plink', 'useForwardOrSocks': 'forward', 'username': 'nogfw', 'useDaemon': 'False', 'retriesInterval': '15', 'usePlainSSH': 'False', 'sharedSecret': '', 'extraOpts': '', 'win32ProxySetting': 'True', 'startupPage': 'https://check.torproject.org/?lang=zh_CN', 'obfsProtocol': 'obfs2', 'disableHostkeyAuth' : 'True' }
-		config = ConfigParser(defaultConfig)
+		config = ConfigParser(self.DEFAULTCONFIG)
 		config.read(fname)
 		conf_list = [
 				[ "main", "obfs2Addr", "str" ],
