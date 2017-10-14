@@ -49,6 +49,7 @@ class Configure:
 				[ "main", "startupPage", "str" ],
 				[ "main", "obfsProtocol", "str" ],
 				[ "main", "disableHostkeyAuth", "bool" ],
+				[ "main", "useBandWidthObfs", "bool" ],
 				[ "path", "obfs2Path", "str" ],
 				[ "path", "clientPath", "str" ],
 				[ "debug", "verbose", "bool" ],
@@ -88,6 +89,21 @@ class Configure:
 		except NoOptionError as e:
 			self.keyFilePath = None
 
+		try:
+			self.bandwidthPort = config.getint('main', 'bandwidthPort')
+		except NoOptionError as e:
+			self.bandwidthPort = None
+
+		try:
+			self.bandwidthKey = config.get('main', 'bandwidthKey')
+		except NoOptionError as e:
+			self.bandwidthKey = None
+
+		try:
+			self.bandwidthPath = config.get('path', 'bandwidthPath')
+		except NoOptionError as e:
+			self.bandwidthPath = None
+
 		if self.useForwardOrSocks.upper() != 'FORWARD' and self.useForwardOrSocks.upper() != 'SOCKS':
 			raise RuntimeError("Invalid mode for useForwardOrSocks: %s" % (self.useForwardOrSocks))
 
@@ -98,6 +114,10 @@ class Configure:
 			if not self.socksPort:
 				raise RuntimeError("Invalid sock5 port")
 
+		if self.useBandWidthObfs:
+			if self.bandwidthKey is None or len(self.bandwidthKey) != 32:
+				raise RuntimeError("bandwidth obfs key should be 16 bytes hexstring")
+
 g_conf = None
 g_quitting = False
 
@@ -107,11 +127,11 @@ def getSubprocessKwargs():
 	# take control of stdin if host key auth is disabled
 	if g_conf.disableHostkeyAuth:
 		kwargs['stdin'] = subprocess.PIPE
-	
+
 	if g_conf.useDaemon:
 		kwargs['stdout'] = open(os.devnull, 'w')
 		kwargs['stderr'] = subprocess.STDOUT
-	
+
 	if subprocess.mswindows:
 		su = subprocess.STARTUPINFO()
 		su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -135,6 +155,7 @@ def runPlinkOrSSH(cmd):
 	return p.returncode
 
 g_obfsproxyProcess = None
+g_bandwidthProcess = None
 
 def onRetriesDelay(retcode):
 	if not g_quitting:
@@ -152,8 +173,22 @@ def obfsproxyThread(cmd):
 		retcode = g_obfsproxyProcess.wait()
 		onRetriesDelay(retcode)
 
-def runObfsproxy(cmd):
-	t = threading.Thread(target=obfsproxyThread, args=(cmd,))
+def bandwidthThread(cmd):
+	global g_bandwidthProcess
+
+	while not g_quitting:
+		cmdStr = " ".join(cmd).strip()
+		logging.info("Executing: %s", cmdStr)
+		g_bandwidthProcess = subprocess.Popen(cmd, **getSubprocessKwargs())
+		g_bandwidthProcess.communicate()
+		retcode = g_bandwidthProcess.wait()
+		onRetriesDelay(retcode)
+
+def runInBackground(cmd, type='obfsproxyThread'):
+	if type == 'bandwidthThread':
+		t = threading.Thread(target=bandwidthThread, args=(cmd,))
+	else:
+		t = threading.Thread(target=obfsproxyThread, args=(cmd,))
 	t.daemon = True
 	t.start()
 
@@ -207,7 +242,7 @@ def waitUntilConnectionCompleted(conf):
 		tempAddr = getHttpForwardAddress(conf)
 	else:
 		tempAddr = getSocks5Address(conf)
-	
+
 	#logging.debug("trying %s:%d", tempAddr[0], tempAddr[1])
 	while not checkReachable(tempAddr[0], tempAddr[1], complex=False):
 		doSleep()
@@ -233,14 +268,23 @@ def generatePlinkOrSSHCmd(conf):
 
 	if conf.keyFilePath:
 		plinkCmd += [ '-i', conf.keyFilePath ]
-	
+
 	if conf.useForwardOrSocks.upper() == 'FORWARD':
-		plinkCmd += [ '-L', conf.httpProxyForwardAddr ]
+		if conf.useBandWidthObfs:
+			bandwithFoward = conf.httpProxyForwardAddr[:].split(':')
+			if len(bandwithFoward) >= 4:
+				bandwithFoward[1] = bandwithFoward[3] = str(conf.bandwidthPort)
+			else:
+				bandwithFoward[0] = bandwithFoward[2] = str(conf.bandwidthPort)
+
+			plinkCmd += [ '-L', ':'.join(bandwithFoward) ]
+		else:
+			plinkCmd += [ '-L', conf.httpProxyForwardAddr ]
 	else:
 		plinkCmd += [ '-D', '%d'% (conf.socksPort) ]
 
 	plinkCmd += [ '-P' if conf.clientType.upper() == 'PLINK' \
-				else '-p', '%d' % (conf.SSHPort) ] 
+				else '-p', str(conf.SSHPort) ]
 
 	plinkCmd += [ '%s@%s' % (conf.username, conf.SSHHostName) ]
 
@@ -323,7 +367,12 @@ def main():
 	if g_conf.usePlainSSH:
 		g_conf.SSHHostName, g_conf.SSHPort = g_conf.obfs2HostName, g_conf.obfs2Port
 	else:
-		runObfsproxy(obfsproxyCmd)
+		runInBackground(obfsproxyCmd)
+
+	if g_conf.useBandWidthObfs:
+		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', g_conf.httpProxyForwardAddr.split(':')[-1], '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
+		logging.info(bandwidthCmd)
+		runInBackground(bandwidthCmd, 'bandwidthThread')
 
 	if g_proxy:
 		if g_conf.useForwardOrSocks.upper() == 'FORWARD':
@@ -347,6 +396,7 @@ def main():
 			logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
 		try:
 			plinkCmd = generatePlinkOrSSHCmd(g_conf)
+			logging.debug("Executing: %s", plinkCmd)
 			retcode = runPlinkOrSSH(plinkCmd)
 			onRetriesDelay(retcode)
 		except KeyboardInterrupt as e:
@@ -356,7 +406,8 @@ import atexit
 
 @atexit.register
 def cleanup():
-	global g_obfsproxyProcess 
+	global g_obfsproxyProcess
+	global g_bandwidthProcess
 	global g_quitting
 	global g_proxy
 
@@ -370,12 +421,20 @@ def cleanup():
 		g_proxy.disable()
 
 	if g_obfsproxyProcess:
-		logging.info("Cleanup Process %d", g_obfsproxyProcess.pid)
+		logging.info("Cleanup Obfsproxy Process %d", g_obfsproxyProcess.pid)
 		g_obfsproxyProcess.terminate()
 		doSleep()
 
 		if g_obfsproxyProcess.poll() is None:
 			g_obfsproxyProcess.kill()
+
+	if g_bandwidthProcess:
+		logging.info("Cleanup Bandwidth Process %d", g_bandwidthProcess.pid)
+		g_bandwidthProcess.terminate()
+		doSleep()
+
+		if g_bandwidthProcess.poll() is None:
+			g_bandwidthProcess.kill()
 
 if __name__ == "__main__":
 	main()
