@@ -3,6 +3,8 @@
 import logging, sys, socket, subprocess, threading, time, os.path, os, signal, random, argparse
 from ConfigParser import *
 
+import tcprelay_secret_exp
+
 def isWin32():
 	return sys.platform == 'win32'
 
@@ -154,6 +156,11 @@ def runInBackground(cmd):
 
 	return c
 
+def runInBackgroundThread(func, args):
+	t = threading.Thread(target=func, args=args)
+	t.daemon = True
+	t.start()
+
 def checkReachable(ip, port, timeout=5, complex=True):
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -304,7 +311,6 @@ def getSocks5Address(conf):
 	return ['localhost', conf.socksPort]
 
 g_obfsproxy = None
-g_bandwidth = None
 
 def waitForObfs():
 	if not g_conf.usePlainSSH:
@@ -322,7 +328,6 @@ def main():
 	global g_conf
 	global g_proxy
 	global g_obfsproxy
-	global g_bandwidth
 
 	parser = argparse.ArgumentParser('obfs2ssh')
 	parser.add_argument('config_filename', help='Configure file')
@@ -348,8 +353,10 @@ def main():
 			proxy_port = splited[0]
 		else:
 			proxy_port = splited[1]
-		bandwidthCmd = [ r'c:\python27\python.exe', g_conf.bandwidthPath, '-p', proxy_port, '-P', str(g_conf.bandwidthPort), '-m', '1:%s' % (g_conf.bandwidthKey) ]
-		g_bandwidth = runInBackground(bandwidthCmd)
+		def bandwidth_thread():
+			tcprelay_secret_exp.forwarder('127.0.0.1', int(proxy_port), ['127.0.0.1'], g_conf.bandwidthPort, '1', g_conf.bandwidthKey)
+			tcprelay_secret_exp.asyncore.loop()
+		runInBackgroundThread(bandwidth_thread, tuple())
 
 	if g_conf.win32ProxySetting:
 		logging.info("Setup Proxy")
@@ -387,7 +394,6 @@ import atexit
 @atexit.register
 def cleanup():
 	global g_obfsproxy
-	global g_bandwidth
 	global g_proxy
 	global g_conf
 
@@ -400,9 +406,6 @@ def cleanup():
 
 	if g_obfsproxy:
 		g_obfsproxy.kill("Obfsproxy")
-
-	if g_bandwidth:
-		g_bandwidth.kill("Bandwidth")
 
 if __name__ == "__main__":
 	main()
