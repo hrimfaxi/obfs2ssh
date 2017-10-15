@@ -22,7 +22,7 @@ class Configure:
 			'win32ProxySetting': 'True',
 			'startupPage': 'http://www.ip138.com',
 			'obfsProtocol': 'obfs2',
-			'disableHostkeyAuth' : 'True'
+			'disableHostkeyAuth' : 'True',
 	}
 	def __init__(self, fname):
 		config = ConfigParser(self.DEFAULTCONFIG)
@@ -51,6 +51,7 @@ class Configure:
 				[ "main", "socksPort", "int", None ],
 				[ "main", "bandwidthPort", "int", None ],
 				[ "main", "bandwidthKey", "str", None ],
+				[ "main", "bandwidthListenAddress", "str", '127.0.0.1' ],
 				[ "path", "keyFilePath", "str", None ],
 				[ "path", "bandwidthPath", "str", None ],
 				[ "path", "sysproxyPath", "str", None ],
@@ -315,7 +316,7 @@ def main():
 		else:
 			proxy_port = splited[1]
 		def bandwidth_thread():
-			tcprelay_secret_exp.forwarder('127.0.0.1', int(proxy_port), ['127.0.0.1'], g_conf.bandwidthPort, '1', g_conf.bandwidthKey)
+			tcprelay_secret_exp.forwarder(g_conf.bandwidthListenAddress, int(proxy_port), ['127.0.0.1'], g_conf.bandwidthPort, '1', g_conf.bandwidthKey)
 			tcprelay_secret_exp.asyncore.loop()
 		logging.info("Using bandwidth obfs with port %d" % (g_conf.bandwidthPort))
 		runInBackgroundThread(bandwidth_thread, tuple())
