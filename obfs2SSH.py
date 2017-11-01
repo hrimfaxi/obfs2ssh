@@ -110,7 +110,7 @@ class ProcessContainer:
 	def onRetriesDelay(self, retcode):
 		if not self.quitting:
 			logging.error("Terminated by error code %d, restarting in %d seconds...", retcode, g_conf.retriesInterval)
-			doSleep()
+			time.sleep(g_conf.retriesInterval)
 	def run(self, cmd, beforeRun=None, afterRun=None):
 		while not self.quitting:
 			if beforeRun:
@@ -130,7 +130,7 @@ class ProcessContainer:
 			return
 		logging.info("Cleanup %s Process %d", name, self.process.pid)
 		self.process.terminate()
-		doSleep()
+		time.sleep(1)
 
 		if self.process.poll() is None:
 			self.process.kill()
@@ -176,7 +176,7 @@ def waitUntilConnectionCompleted(conf):
 
 	#logging.debug("trying %s:%d", tempAddr[0], tempAddr[1])
 	while not checkReachable(tempAddr[0], tempAddr[1], complex=False):
-		doSleep()
+		time.sleep(1)
 	logging.debug('%s:%d connected', tempAddr[0], tempAddr[1])
 
 def openBrowser():
@@ -237,9 +237,6 @@ def setupLogger(conf):
 	else:
 		logging.basicConfig(level=logging.DEBUG if conf.verbose else logging.INFO, format='%(levelname)s - %(asctime)s %(message)s', datefmt='[%b %d %H:%M:%S]')
 
-def doSleep(t=1):
-	time.sleep(t if t else g_conf.retriesInterval)
-
 def resolveHost(address):
 	while True:
 		try:
@@ -249,7 +246,7 @@ def resolveHost(address):
 			break
 		except socket.gaierror as e:
 			logging.info(e)
-			doSleep()
+			time.sleep(1)
 	return ip, port
 
 def getHttpForwardAddress(conf):
@@ -277,7 +274,7 @@ g_obfsproxy = None
 def waitForObfs():
 	if not g_conf.usePlainSSH:
 		while not checkReachable(g_conf.SSHHostName, g_conf.SSHPort, complex=False):
-			doSleep()
+			time.sleep(1)
 
 		logging.info("Obfsporxy connection %s:%s connected", g_conf.obfs2HostName, g_conf.obfs2Port)
 
