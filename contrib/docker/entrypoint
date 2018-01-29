@@ -1,0 +1,6 @@
+#!/bin/bash
+
+service ssh start
+service privoxy start
+
+python2 /usr/local/bin/tcprelay_secret_exp.py -p $SRCPORT -P $DSTPORT -m 2:${KEY}
