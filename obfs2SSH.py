@@ -280,8 +280,11 @@ def waitForObfs():
 
 def writeYes(process):
 	# write 'yes' if hostkey auth is disabled
-	if g_conf.disableHostkeyAuth:
-		process.stdin.write("yes\n")
+        try:
+            if g_conf.disableHostkeyAuth:
+                    process.stdin.write("yes\n")
+        except IOError as e:
+            pass
 
 def main():
 	global g_conf
