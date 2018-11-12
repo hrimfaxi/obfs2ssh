@@ -56,11 +56,31 @@ apt-get install python
 git clone https://github.com/hrimfaxi/obfs2ssh
 cd obfs2ssh
 cp tcprelay_secret_exp.py /usr/local/bin
-sed -i '/^exit 0/i nohup /usr/local/bin/tcprelay_secret_exp.py -p 8117 -P 8118 -m 2:2f86ca292daf89e41acb186b82f63d7d &' /etc/rc.local
-/etc/rc.local
+cat > /etc/systemd/system/tcpreplay_secret_exp.service <<< EOF
+[Unit]
+Description=tcp replay random padding service
+
+[Service]
+Type=simple
+Environment="SRCPORT=8117"
+Environment="DSTPORT=8118"
+Environment="KEY=2f86ca292daf89e41acb186b82f63d7d"
+EnvironmentFile=-/etc/default/tcpreplay_secret_exp
+ExecStart=/usr/bin/env python2 /usr/local/bin/tcprelay_secret_exp.py -p \$SRCPORT -P \$DSTPORT -m 2:\${KEY}
+User=nobody
+CapabilityBoundingSet=~CAP_SYS_PTRACE
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable tcpreplay_secret_exp
+sudo systemctl start tcpreplay_secret_exp
+
 ```
 
-如需要修改流量混淆密码，需要在obfs2ssh客户端bandwithKey和服务器上/etc/rc.local同时修改为16字节大小的hex字符。
+如需要修改流量混淆密码，需要在obfs2ssh客户端bandwithKey和服务器上/etc/l同时修改为16字节大小的hex字符。
 此脚本监听在8117端口上，负责在服务器将客户端的伪数据去除后送真正的http代理端口。
 
 **最后的优化，安装google bbr，并优化sysctl网络参数.**
@@ -131,7 +151,7 @@ reboot
 
 -   main.useBandWidthObfs 应为yes
 
--   main.bandwidthPort main.bandwidthKey应与服务器上/etc/rc.local一致
+-   main.bandwidthPort main.bandwidthKey应与服务器上/etc/l一致
 
 -   main.bandwidthListenAddress
     全局监听应为0.0.0.0，只监听环回接口应为127.0.0.1
